@@ -1,0 +1,11 @@
+<package format="2">
+  <name>hpp_ros_interface</name>
+  <version>0.0.0</version>
+  <description>Bindings between hpp corba servers and ros</description>
+  <maintainer email="hpp@laas.fr">Joseph Mirabel</maintainer>
+  <license>LGPL</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+  <build_depend>message_generation</build_depend>
+  <exec_depend>message_runtime</exec_depend>
+</package>
