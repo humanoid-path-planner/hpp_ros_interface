@@ -30,19 +30,30 @@ PROJECT(hpp_ros_interface)
 
 find_package(catkin REQUIRED COMPONENTS rospy std_msgs message_generation)
 
-add_service_files(FILES
-  hpp/corbaserver/problem/hpp_corbaserver_problem_configAtParam.srv
-  hpp/corbaserver/problem/hpp_corbaserver_problem_setInitialConfig.srv
-  hpp/corbaserver/problem/hpp_corbaserver_problem_addGoalConfig.srv
-  hpp/corbaserver/problem/hpp_corbaserver_problem_resetGoalConfigs.srv
-  hpp/corbaserver/problem/hpp_corbaserver_problem_solve.srv
-  )
+# add_service_files(FILES
+  # hpp/corbaserver/problem/hpp_corbaserver_problem_configAtParam.srv
+  # hpp/corbaserver/problem/hpp_corbaserver_problem_setInitialConfig.srv
+  # hpp/corbaserver/problem/hpp_corbaserver_problem_addGoalConfig.srv
+  # hpp/corbaserver/problem/hpp_corbaserver_problem_resetGoalConfigs.srv
+  # hpp/corbaserver/problem/hpp_corbaserver_problem_solve.srv
+  # )
+
+add_message_files(FILES
+    ProblemSolved.msg)
 
 generate_messages(DEPENDENCIES std_msgs)
 
 catkin_package(DEPENDS message_runtime)
 
-INSTALL(PROGRAMS src/hpp_ros.py
-  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
+INSTALL(FILES
+  src/hpp_ros/trajectory_publisher.py
+  src/hpp_ros/planning_request_adapter.py
+  src/hpp_ros/__init__.py
+  DESTINATION ${CATKIN_PACKAGE_PYTHON_DESTINATION})
+
+# INSTALL(PROGRAMS src/hpp_ros.py
+  # DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
+INSTALL(PROGRAMS scripts/hpp_node.py
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/scripts)
 
 # SETUP_PROJECT_FINALIZE()
