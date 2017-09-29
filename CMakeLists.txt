@@ -18,15 +18,16 @@
 # Requires at least CMake 2.6 to configure the package.
 CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
 
-# INCLUDE(cmake/base.cmake)
+INCLUDE(cmake/base.cmake)
 # INCLUDE(cmake/python.cmake)
 
-# SET(PROJECT_NAME hpp_ros_interface)
-# SET(PROJECT_DESCRIPTION "")
-# SET(PROJECT_URL "")
+SET(PROJECT_NAME hpp_ros_interface)
+SET(PROJECT_DESCRIPTION "")
+SET(PROJECT_URL "")
+SET(PROJECT_VERSION "")
 
-# SETUP_PROJECT()
-PROJECT(hpp_ros_interface)
+SETUP_PROJECT()
+# PROJECT(hpp_ros_interface)
 
 find_package(catkin REQUIRED COMPONENTS rospy std_msgs message_generation)
 
@@ -44,10 +45,12 @@ add_message_files(FILES
 generate_messages(DEPENDENCIES std_msgs)
 
 catkin_package(DEPENDS message_runtime)
+ADD_OPTIONAL_DEPENDENCY("hpp-corbaserver")
 
 INSTALL(FILES
   src/hpp_ros/trajectory_publisher.py
   src/hpp_ros/planning_request_adapter.py
+  src/hpp_ros/hpp_server_initializer.py
   src/hpp_ros/__init__.py
   DESTINATION ${CATKIN_PACKAGE_PYTHON_DESTINATION})
 
@@ -55,5 +58,12 @@ INSTALL(FILES
   # DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
 INSTALL(PROGRAMS scripts/hpp_node.py
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/scripts)
+INSTALL(DIRECTORY launch
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
+
+IF(HPP_CORBASERVER_FOUND)
+    INSTALL(PROGRAMS ${HPP_CORBASERVER_PREFIX}/bin/hppcorbaserver
+        DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+ENDIF(HPP_CORBASERVER_FOUND)
 
 # SETUP_PROJECT_FINALIZE()
