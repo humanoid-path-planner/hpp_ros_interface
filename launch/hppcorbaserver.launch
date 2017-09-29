@@ -5,7 +5,7 @@
     <group ns="hpp" >
         <param name="host" value="$(arg host)" type="str" />
         <param name="port" value="$(arg port)" type="int" />
-        <machine name="$(arg host)" address="$(arg host)" env-loader="~/.bashrc" />
-        <node name="hppcorbaserver" pkg="hpp_ros_interface" type="hppcorbaserver" respawn="true" />
+        <machine name="hppserver_machine" address="$(arg host)" env-loader="~/.bashrc" />
+        <node machine="hppserver_machine" name="hppcorbaserver" pkg="hpp_ros_interface" type="hppcorbaserver" respawn="true" />
     </group>
 </launch>
