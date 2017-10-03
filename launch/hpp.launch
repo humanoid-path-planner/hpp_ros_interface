@@ -1,0 +1,14 @@
+<launch>
+    <arg name="host" default="localhost" />
+    <arg name="port" default="2809" />
+    <arg name="server" default="hppcorbaserver" />
+
+    <include file="$( find hpp_ros_interface )/launch/$(arg server).launch">
+        <arg name="host" value="$(arg host)" />
+        <arg name="port" value="$(arg port)" />
+    </include>
+
+    <group ns="hpp" >
+        <node name="hpp_interface" pkg="hpp_ros_interface" type="hpp_node.py" respawn="true" />
+    </group>
+</launch>

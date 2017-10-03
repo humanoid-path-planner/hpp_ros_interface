@@ -30,7 +30,7 @@ SET(INSTALL_DOCUMENTATION OFF)
 SETUP_PROJECT()
 # PROJECT(hpp_ros_interface)
 
-find_package(catkin REQUIRED COMPONENTS rospy std_msgs message_generation)
+find_package(catkin REQUIRED COMPONENTS rospy std_msgs sensor_msgs geometry_msgs message_generation)
 
 # add_service_files(FILES
   # hpp/corbaserver/problem/hpp_corbaserver_problem_configAtParam.srv
@@ -41,9 +41,10 @@ find_package(catkin REQUIRED COMPONENTS rospy std_msgs message_generation)
   # )
 
 add_message_files(FILES
+    PlanningGoal.msg
     ProblemSolved.msg)
 
-generate_messages(DEPENDENCIES std_msgs)
+generate_messages(DEPENDENCIES std_msgs sensor_msgs geometry_msgs)
 
 catkin_package(DEPENDS message_runtime)
 ADD_OPTIONAL_DEPENDENCY("hpp-corbaserver")
