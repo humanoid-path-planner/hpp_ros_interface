@@ -9,6 +9,6 @@
     </include>
 
     <group ns="hpp" >
-        <node name="hpp_interface" pkg="hpp_ros_interface" type="hpp_node.py" respawn="true" />
+        <node name="hpp_interface" pkg="hpp_ros_interface" type="hpp_node.py" args="$(arg server)" respawn="true" />
     </group>
 </launch>

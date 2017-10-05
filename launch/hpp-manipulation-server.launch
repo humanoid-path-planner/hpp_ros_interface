@@ -1,0 +1,10 @@
+<launch>
+    <arg name="host" default="localhost" />
+    <arg name="port" default="2809" />
+
+    <group ns="hpp" >
+        <param name="host" value="$(arg host)" type="str" />
+        <param name="port" value="$(arg port)" type="int" />
+        <node name="hpp_server" pkg="hpp_ros_interface" type="hpp-manipulation-server" respawn="true" />
+    </group>
+</launch>

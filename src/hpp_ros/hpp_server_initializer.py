@@ -37,7 +37,7 @@ def setParameters (hpp, name, params):
         rospy.logwarn("Could not set parameter " + name + " with value " +
                 str(params) + " of unknown type " + str(type(params)))
 
-class HppServerInitializer:
+class HppServerInitializer(object):
     subscribersDict = {
             "hpp": {
                 "reset" : [Bool, "reset" ],
@@ -47,7 +47,7 @@ class HppServerInitializer:
                 },
             }
 
-    def __init__ (self, hpp_url = "corbaloc:iiop:/NameService"):
+    def __init__ (self):
         self.subscribers = self._createTopics ("", self.subscribersDict, True)
         self.hpp_url = None
         self.setHppUrl()
@@ -62,7 +62,7 @@ class HppServerInitializer:
         url = "corbaloc:iiop:{}:{}/NameService".format(hpphost, hppport)
         if url != self.hpp_url:
             self.hpp_url = url
-            self.hpp = hpp.corbaserver.Client(url=url)
+            self._connect()
 
     def reset (self, msg):
         self.initialize()
@@ -137,7 +137,13 @@ class HppServerInitializer:
 
     def createViewer (self, *args, **kwargs):
         host = rospy.get_param("/gepetto_viewer/host", "localhost")
-        return self.vf.createViewer(host = host, *args, **kwargs)
+        try:
+            return self.vf.createViewer(host = host, *args, **kwargs)
+        except:
+            rospy.loginfo("Could not reach the Gepetto-viewer")
+
+    def _connect(self):
+        self.hpp = hpp.corbaserver.Client(url=self.hpp_url)
 
     def _hpp (self, reconnect = True):
         try:
@@ -145,7 +151,7 @@ class HppServerInitializer:
         except (CORBA.TRANSIENT, CORBA.COMM_FAILURE) as e:
             if reconnect:
                 rospy.loginfo ("Connection with HPP lost. Trying to reconnect.")
-                self.hpp = hpp.corbaserver.Client(url=self.hpp_url)
+                self._connect()
                 return self._hpp(False)
             else: raise e
         return self.hpp
