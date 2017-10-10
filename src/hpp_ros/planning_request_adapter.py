@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import rospy, hpp.corbaserver
 from tf import TransformListener
+from hpp_ros_interface import HppClient
 from hpp_ros_interface.msg import ProblemSolved, PlanningGoal
 from hpp_ros_interface.trajectory_publisher import JointPathCommandPublisher
 from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
@@ -21,7 +22,7 @@ def init_node ():
     rospy.init_node('planning_request_adapter')
 
 
-class PlanningRequestAdapter:
+class PlanningRequestAdapter(HppClient):
     subscribersDict = {
             "motion_planning": {
                 "set_goal" : [PlanningGoal, "set_goal" ],
@@ -39,56 +40,33 @@ class PlanningRequestAdapter:
             }
     modes = [ "current", "user_defined" ]
 
-    def __init__ (self, topicStateFeedback, hpp_url = "corbaloc:iiop:/NameService"):
+    def __init__ (self, topicStateFeedback):
+        super(PlanningRequestAdapter, self).__init__ ()
         self.subscribers = self._createTopics ("", self.subscribersDict, True)
         self.publishers = self._createTopics ("", self.publishersDict, False)
         self.topicStateFeedback = topicStateFeedback
-        self.hpp_url = hpp_url
+        self.setHppUrl()
         self.q_init = None
         self.init_mode = "user_defined"
         self.get_current_state = None
         self.tfListener = TransformListener()
         self.mutexSolve = Lock()
         self.world_frame = "/world"
-        self.hpp = hpp.corbaserver.Client(url=hpp_url)
         self.robot_base_frame = None
 
     def _hpp (self, reconnect = True):
-        try:
-            self.hpp.robot.getRobotName()
-            self.robot_base_frame = self.hpp.robot.getLinkNames("root_joint")[0]
-            rootJointType = rospy.get_param ("robot_root_joint_type", "anchor")
-            if rootJointType == "anchor":
-                self.setRootJointConfig = lambda x : None
-            elif rootJointType == "freeflyer":
-                self.setRootJointConfig = lambda x : self.hpp.robot.setJointConfig("root_joint", x)
-            elif rootJointType == "planar":
-                self.setRootJointConfig = lambda x : self.hpp.robot.setJointConfig("root_joint", x[0:2] + [x[6]**2 - x[5]**2, 2 * x[5] * x[6]] )
-            else:
-                self.setRootJointConfig = lambda x : (_ for _ in ()).throw(Exception("parameter robot_root_joint_type must be one of (anchor, freeflyer, anchor) and not " + str(rootJointType)))
-        except (CORBA.TRANSIENT, CORBA.COMM_FAILURE) as e:
-            if reconnect:
-                rospy.loginfo ("Connection with HPP lost. Trying to reconnect.")
-                self.hpp = hpp.corbaserver.Client(url=self.hpp_url)
-                return self._hpp(False)
-            else: raise e
-        return self.hpp
-
-    def _createTopics (self, namespace, topics, subscribe):
-        rets = dict ()
-        if isinstance(topics, dict):
-            for k, v in topics.items():
-                rets.update(self._createTopics(namespace + "/" + k, v, subscribe))
+        hpp = super(PlanningRequestAdapter, self)._hpp(reconnect)
+        self.robot_base_frame = hpp.robot.getLinkNames("root_joint")[0]
+        rootJointType = rospy.get_param ("robot_root_joint_type", "anchor")
+        if rootJointType == "anchor":
+            self.setRootJointConfig = lambda x : None
+        elif rootJointType == "freeflyer":
+            self.setRootJointConfig = lambda x : hpp.robot.setJointConfig("root_joint", x)
+        elif rootJointType == "planar":
+            self.setRootJointConfig = lambda x : hpp.robot.setJointConfig("root_joint", x[0:2] + [x[6]**2 - x[5]**2, 2 * x[5] * x[6]] )
         else:
-            if subscribe:
-                try:
-                    callback = getattr(self, topics[1])
-                except AttributeError:
-                    raise NotImplementedError("Class `{}` does not implement `{}`".format(self.__class__.__name__, topics[1]))
-                rets[namespace] = rospy.Subscriber(namespace, topics[0], callback)
-            else:
-                rets[namespace] = rospy.Publisher(namespace, topics[0], queue_size = topics[1])
-        return rets
+            self.setRootJointConfig = lambda x : (_ for _ in ()).throw(Exception("parameter robot_root_joint_type must be one of (anchor, freeflyer, anchor) and not " + str(rootJointType)))
+        return hpp
 
     def _JointStateToConfig(self, placement, js_msg):
         hpp = self._hpp()

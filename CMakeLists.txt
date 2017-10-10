@@ -54,6 +54,7 @@ INSTALL(FILES
   src/hpp_ros/trajectory_publisher.py
   src/hpp_ros/planning_request_adapter.py
   src/hpp_ros/hpp_server_initializer.py
+  src/hpp_ros/client.py
   src/hpp_ros/__init__.py
   DESTINATION ${CATKIN_PACKAGE_PYTHON_DESTINATION})
 

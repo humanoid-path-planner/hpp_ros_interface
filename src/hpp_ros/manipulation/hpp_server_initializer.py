@@ -152,7 +152,3 @@ class HppServerInitializer(_Parent):
 
     def configure (self):
         super(HppServerInitializer, self).configure()
-
-    def _connect (self):
-        super(HppServerInitializer, self)._connect()
-        self.manip = hpp.corbaserver.manipulation.Client (url = self.hpp_url)

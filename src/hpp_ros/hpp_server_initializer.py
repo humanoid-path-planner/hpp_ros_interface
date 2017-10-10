@@ -5,6 +5,7 @@ from hpp.gepetto import ViewerFactory
 import hpp.corbaserver, hpp.corbaserver.robot
 # from hpp.corbaserver import Robot, ProblemSolver
 
+from hpp_ros_interface import HppClient
 from hpp_ros_interface.msg import ProblemSolved
 from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
 from sensor_msgs.msg import JointState
@@ -37,7 +38,7 @@ def setParameters (hpp, name, params):
         rospy.logwarn("Could not set parameter " + name + " with value " +
                 str(params) + " of unknown type " + str(type(params)))
 
-class HppServerInitializer(object):
+class HppServerInitializer(HppClient):
     subscribersDict = {
             "hpp": {
                 "reset" : [Bool, "reset" ],
@@ -48,21 +49,13 @@ class HppServerInitializer(object):
             }
 
     def __init__ (self):
+        super(HppServerInitializer, self).__init__ ()
         self.subscribers = self._createTopics ("", self.subscribersDict, True)
-        self.hpp_url = None
         self.setHppUrl()
         self.robot = None
         self.ps = None
         self.tfListener = TransformListener()
         self.world_frame = "/world"
-
-    def setHppUrl (self):
-        hpphost = rospy.get_param ("/hpp/host", "localhost")
-        hppport = rospy.get_param ("/hpp/port", 2809)
-        url = "corbaloc:iiop:{}:{}/NameService".format(hpphost, hppport)
-        if url != self.hpp_url:
-            self.hpp_url = url
-            self._connect()
 
     def reset (self, msg):
         self.initialize()
@@ -141,33 +134,3 @@ class HppServerInitializer(object):
             return self.vf.createViewer(host = host, *args, **kwargs)
         except:
             rospy.loginfo("Could not reach the Gepetto-viewer")
-
-    def _connect(self):
-        self.hpp = hpp.corbaserver.Client(url=self.hpp_url)
-
-    def _hpp (self, reconnect = True):
-        try:
-            self.hpp.problem.getAvailable("type")
-        except (CORBA.TRANSIENT, CORBA.COMM_FAILURE) as e:
-            if reconnect:
-                rospy.loginfo ("Connection with HPP lost. Trying to reconnect.")
-                self._connect()
-                return self._hpp(False)
-            else: raise e
-        return self.hpp
-
-    def _createTopics (self, namespace, topics, subscribe):
-        rets = dict ()
-        if isinstance(topics, dict):
-            for k, v in topics.items():
-                rets.update(self._createTopics(namespace + "/" + k, v, subscribe))
-        else:
-            if subscribe:
-                try:
-                    callback = getattr(self, topics[1])
-                except AttributeError:
-                    raise NotImplementedError("Class `{}` does not implement `{}`".format(self.__class__.__name__, topics[1]))
-                rets[namespace] = rospy.Subscriber(namespace, topics[0], callback)
-            else:
-                rets[namespace] = rospy.Publisher(namespace, topics[0], queue_size = topics[1])
-        return rets
