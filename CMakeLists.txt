@@ -32,13 +32,10 @@ SETUP_PROJECT()
 
 find_package(catkin REQUIRED COMPONENTS rospy std_msgs sensor_msgs geometry_msgs message_generation)
 
-# add_service_files(FILES
-  # hpp/corbaserver/problem/hpp_corbaserver_problem_configAtParam.srv
-  # hpp/corbaserver/problem/hpp_corbaserver_problem_setInitialConfig.srv
-  # hpp/corbaserver/problem/hpp_corbaserver_problem_addGoalConfig.srv
-  # hpp/corbaserver/problem/hpp_corbaserver_problem_resetGoalConfigs.srv
-  # hpp/corbaserver/problem/hpp_corbaserver_problem_solve.srv
-  # )
+add_service_files(FILES
+    SetJointNames.srv
+    SetString.srv
+  )
 
 add_message_files(FILES
     PlanningGoal.msg
