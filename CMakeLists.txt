@@ -46,6 +46,7 @@ generate_messages(DEPENDENCIES std_msgs sensor_msgs geometry_msgs)
 catkin_package(DEPENDS message_runtime)
 ADD_OPTIONAL_DEPENDENCY("hpp-corbaserver")
 ADD_OPTIONAL_DEPENDENCY("hpp-manipulation-corba")
+ADD_OPTIONAL_DEPENDENCY("dynamic_graph_bridge_msgs")
 
 INSTALL(FILES
   src/hpp_ros/trajectory_publisher.py
