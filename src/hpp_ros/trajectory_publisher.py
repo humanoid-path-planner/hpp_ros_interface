@@ -8,7 +8,7 @@ from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
 from sensor_msgs.msg import JointState
 import Queue
 from dynamic_graph_bridge_msgs.msg import Vector
-from geometry_msgs.msg import Vector3, Transform
+from geometry_msgs.msg import Vector3, Quaternion, Transform
 from std_msgs.msg import UInt32, Empty
 
 def _fillVector(input, segments):
@@ -17,6 +17,13 @@ def _fillVector(input, segments):
     for s in segments:
         output.extend (input[s[0]:s[0]+s[1]])
     return output
+
+def listToVector3(l):
+    return Vector3 (l[0], l[1], l[2])
+def listToQuaternion(l):
+    return Quaternion (l[0], l[1], l[2], l[3])
+def listToTransform(l):
+    return Transform(listToVector3(l[0:3]), listToQuaternion(l[3:7]))
 
 def init_node ():
     rospy.init_node('joint_path_command_publisher')
@@ -190,11 +197,13 @@ class HppOutputQueue(HppClient):
 
     def _readConfigAtParam (self, client, pathId, time, data):
         qin = client.problem.configAtParam (pathId, time)
+        client.robot.setCurrentConfig(qin)
         qout = list()
         # vout = list()
-        for segments in self.joint_selection:
-            qout.append(qin[segments[0][0]:segments[0][1]])
-            # vout.append(vin[segments[0][0]:segments[0][1]])
+        for segment in self.joint_selection[0]:
+            qout.extend(qin[segment[0]:segment[1]])
+        # for segment in self.joint_selection[1]:
+            # vout.extend(vin[segment[0]:segment[1]])
         return Vector(qout)
 
     def _readCenterOfMass (self, client, pathId, time, data):
@@ -202,11 +211,11 @@ class HppOutputQueue(HppClient):
             v = client.robot.getComPosition()
         else:
             v = client.robot.getPartialCom(data)
-        return Vector3(v[0], v[1], v[2])
+        return listToVector3(v)
 
     def _readJointPosition (self, client, pathId, time, data):
         t = client.robot.getJointPosition(data)
-        return Transform (t[0:3], t[3:7])
+        return listToTransform(t)
 
     def readAt (self, pathId, time):
         hpp = self._hpp()
@@ -228,7 +237,7 @@ class HppOutputQueue(HppClient):
         hpp = self._hpp()
         L = hpp.problem.pathLength(pathId)
         N = int(ceil(L * self.frequency))
-        times = np.array(range(N)) / self.frequency
+        times = np.array(range(N+1), dtype=float) / self.frequency
         times[-1] = L
         for t in times:
             self.readAt(pathId, t)
