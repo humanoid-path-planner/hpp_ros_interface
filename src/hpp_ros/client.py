@@ -107,3 +107,8 @@ class HppClient(object):
             else:
                 rets[namespace] = rospy.ServiceProxy(namespace, services[0])
         return rets
+
+    def displayConfig(self, q):
+        if self.withViewer and hasattr(self, "viewer"):
+            self._hpp()
+            self.viewer (q)
