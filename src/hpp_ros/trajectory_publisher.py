@@ -134,14 +134,35 @@ class HppOutputQueue(HppClient):
 
         def publish (self, msg):
             self.pub.publish(msg)
+    class SentToViewer (object):
+        def __init__ (self, parent):
+            self.parent = parent
+
+        def read (self, hpp, pathId, time, uv):
+            if uv:
+                hpp.robot.setCurrentConfig ( hpp.problem.configAtParam(pathId, time) )
+                pos = list()
+                for j, prefix, o in self.parent.viewer.robotBodies:
+                    pos.append ( (prefix + o, hpp.robot.getLinkPosition (o) ) )
+                return tuple(pos)
+            else:
+                return ()
+
+        def publish (self, msg):
+            if not isinstance(msg, (tuple, list)) or len(msg) == 0: return
+            for name, pos in msg:
+                self.parent.viewer.client.gui.applyConfiguration(name, pos)
+            self.parent.viewer.client.gui.refresh()
 
     def __init__ (self):
-        super(HppOutputQueue, self).__init__ ()
+        super(HppOutputQueue, self).__init__ (withViewer = True)
 
         self.frequency = 100 # Hz
+        self.viewerFreq = 25 # Hz
         self.queue = Queue.Queue (100)
 
         self.topics = [
+                self.SentToViewer (self),
                 self.Topic (self._readConfigAtParam, "joint_state", Vector),
                 ]
         self.setJointNames (SetJointNamesRequest(self._hpp().robot.getJointNames()))
@@ -217,10 +238,10 @@ class HppOutputQueue(HppClient):
         t = client.robot.getJointPosition(data)
         return listToTransform(t)
 
-    def readAt (self, pathId, time):
+    def readAt (self, pathId, time, uv = False):
         hpp = self._hpp()
-        msgs = []
-        for topic in self.topics:
+        msgs = [ self.topics[0].read (hpp, pathId, time, uv), ]
+        for topic in self.topics[1:]:
             msgs.append (topic.read(hpp, pathId, time))
         self.queue.put (msgs, True)
 
@@ -232,15 +253,20 @@ class HppOutputQueue(HppClient):
 
     def read (self, msg):
         pathId = msg.data
-        rospy.loginfo("Start reading path {}".format(pathId))
-        from math import ceil
+        from math import ceil, floor
         hpp = self._hpp()
         L = hpp.problem.pathLength(pathId)
         N = int(ceil(L * self.frequency))
+        rospy.loginfo("Start reading path {} into {} points".format(pathId, N+1))
         times = np.array(range(N+1), dtype=float) / self.frequency
         times[-1] = L
-        for t in times:
-            self.readAt(pathId, t)
+        Nv = int(ceil(float(self.frequency) / float(self.viewerFreq)))
+        updateViewer = [ False ] * (N+1)
+        if hasattr(self, "viewer"):
+            for i in range(0,len(updateViewer), Nv): updateViewer[i] = True
+            updateViewer[-1] = True
+        for t, uv in zip(times, updateViewer):
+            self.readAt(pathId, t, uv)
         rospy.loginfo("Finish reading path {}".format(pathId))
 
     def publish(self, empty):
