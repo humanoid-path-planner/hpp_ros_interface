@@ -117,6 +117,8 @@ class HppOutputQueue(HppClient):
                     "set_joint_names": [ SetJointNames, "setJointNames", ],
                     "add_center_of_mass": [ SetString, "addCenterOfMass", ],
                     "add_operational_frame": [ SetString, "addOperationalFrame", ],
+                    "add_center_of_mass_velocity": [ SetString, "addCenterOfMassVelocity", ],
+                    "add_operational_frame_velocity": [ SetString, "addOperationalFrameVelocity", ],
                     }
                 }
             }
@@ -163,7 +165,8 @@ class HppOutputQueue(HppClient):
 
         self.topics = [
                 self.SentToViewer (self),
-                self.Topic (self._readConfigAtParam, "joint_state", Vector),
+                self.Topic (self._readConfigAtParam, "position", Vector),
+                self.Topic (self._readConfigAtParam, "velocity", Vector),
                 ]
         self.setJointNames (SetJointNamesRequest(self._hpp().robot.getJointNames()))
 
@@ -181,10 +184,27 @@ class HppOutputQueue(HppClient):
                 )
         return SetStringResponse(True)
 
+    def addCenterOfMassVelocity (self, req):
+        # TODO check that com exists
+        comName = req.value
+        n = "velocity/com"
+        if comName != "":
+            n += "/" + comName
+        self.topics.append (
+                self.Topic (self._readCenterOfMassVelocity, n, Vector3, data = comName),
+                )
+        return SetStringResponse(True)
+
     def addOperationalFrame (self, req):
         # TODO check that frame exists
         n = "op_frame/" + req.value
         self.topics.append (self.Topic (self._readJointPosition, n, Transform, data = req.value))
+        return SetStringResponse(True)
+
+    def addOperationalFrameVelocity (self, req):
+        # TODO check that frame exists
+        n = "velocity/op_frame/" + req.value
+        self.topics.append (self.Topic (self._readJointVelocity, n, Vector, data = req.value))
         return SetStringResponse(True)
 
     def setJointNames (self, req):
@@ -227,16 +247,35 @@ class HppOutputQueue(HppClient):
             # vout.extend(vin[segment[0]:segment[1]])
         return Vector(qout)
 
+    def _readVelocityAtParam (self, client, pathId, time, data):
+        vin = client.problem.velocityAtParam (pathId, time)
+        client.robot.setCurrentVelocity(vin)
+        vout = list()
+        for segment in self.joint_selection[1]:
+            vout.extend(vin[segment[0]:segment[1]])
+        return Vector(vout)
+
     def _readCenterOfMass (self, client, pathId, time, data):
         if data == "":
-            v = client.robot.getComPosition()
+            v = client.robot.getCenterOfMass()
         else:
             v = client.robot.getPartialCom(data)
+        return listToVector3(v)
+
+    def _readCenterOfMassVelocity (self, client, pathId, time, data):
+        if data == "":
+            v = client.robot.getCenterOfMassVelocity()
+        else:
+            v = client.robot.getVelocityPartialCom(data)
         return listToVector3(v)
 
     def _readJointPosition (self, client, pathId, time, data):
         t = client.robot.getJointPosition(data)
         return listToTransform(t)
+
+    def _readJointVelocity (self, client, pathId, time, data):
+        t = client.robot.getJointVelocity(data)
+        return Vector(t)
 
     def readAt (self, pathId, time, uv = False):
         hpp = self._hpp()
