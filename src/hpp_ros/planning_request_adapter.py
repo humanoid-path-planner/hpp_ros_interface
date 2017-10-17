@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import rospy, hpp.corbaserver
 from tf import TransformListener
-from hpp_ros_interface import HppClient
+from hpp_ros_interface.client import HppClient
 from hpp_ros_interface.msg import ProblemSolved, PlanningGoal
 from hpp_ros_interface.trajectory_publisher import JointPathCommandPublisher
 from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import rospy, hpp.corbaserver
 import numpy as np
-from hpp_ros_interface import HppClient
+from hpp_ros_interface.client import HppClient
 from hpp_ros_interface.msg import *
 from hpp_ros_interface.srv import *
 from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
