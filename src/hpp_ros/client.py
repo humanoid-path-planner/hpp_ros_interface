@@ -5,6 +5,7 @@ import hpp.corbaserver.manipulation
 import hpp.corbaserver.manipulation.robot
 import hpp.gepetto
 import hpp.gepetto.manipulation
+import ros_tools
 
 class HppClient(object):
     def __init__ (self, withViewer = False):
@@ -74,39 +75,13 @@ class HppClient(object):
         \param subscribe boolean whether this node should subscribe to the topics.
                                  If False, this node publishes to the topics.
         """
-        rets = dict ()
-        if isinstance(topics, dict):
-            for k, v in topics.items():
-                rets.update(self._createTopics(namespace + "/" + k, v, subscribe))
-        else:
-            if subscribe:
-                try:
-                    callback = getattr(self, topics[1])
-                except AttributeError:
-                    raise NotImplementedError("Class `{}` does not implement `{}`".format(self.__class__.__name__, topics[1]))
-                rets[namespace] = rospy.Subscriber(namespace, topics[0], callback)
-            else:
-                rets[namespace] = rospy.Publisher(namespace, topics[0], queue_size = topics[1])
-        return rets
+        return ros_tools.createTopics(self, namespace, topics, subscribe)
 
     def _createServices (self, namespace, services, serve):
         """
         \param serve boolean whether this node should serve or use the topics.
         """
-        rets = dict ()
-        if isinstance(services, dict):
-            for k, v in services.items():
-                rets.update(self._createServices(namespace + "/" + k, v, serve))
-        else:
-            if serve:
-                try:
-                    callback = getattr(self, services[1])
-                except AttributeError:
-                    raise NotImplementedError("Class `{}` does not implement `{}`".format(self.__class__.__name__, services[1]))
-                rets[namespace] = rospy.Service(namespace, services[0], callback)
-            else:
-                rets[namespace] = rospy.ServiceProxy(namespace, services[0])
-        return rets
+        return ros_tools.createServices (self, namespace, services, serve)
 
     def displayConfig(self, q):
         if self.withViewer and hasattr(self, "viewer"):
