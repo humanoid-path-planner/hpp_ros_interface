@@ -10,6 +10,7 @@ import Queue
 from dynamic_graph_bridge_msgs.msg import Vector
 from geometry_msgs.msg import Vector3, Quaternion, Transform
 from std_msgs.msg import UInt32, Empty
+import std_srvs.srv
 
 def _fillVector(input, segments):
     """ Returns a vector that contains the segments extracted from input """
@@ -111,10 +112,15 @@ class HppOutputQueue(HppClient):
                     },
                 },
             }
+    publishersDist = {
+            "read_path_done": [ UInt32, 1 ],
+            "publish_done": [ Empty, 1 ]
+            }
     servicesDict = {
             "hpp": {
                 "target": {
                     "set_joint_names": [ SetJointNames, "setJointNames", ],
+                    "reset_topics": [ std_srvs.srv.Empty, "resetTopics", ],
                     "add_center_of_mass": [ SetString, "addCenterOfMass", ],
                     "add_operational_frame": [ SetString, "addOperationalFrame", ],
                     "add_center_of_mass_velocity": [ SetString, "addCenterOfMassVelocity", ],
@@ -163,15 +169,22 @@ class HppOutputQueue(HppClient):
         self.viewerFreq = 25 # Hz
         self.queue = Queue.Queue (100)
 
+        self.setJointNames (SetJointNamesRequest(self._hpp().robot.getJointNames()))
+
+        self.subscribers = self._createTopics ("", self.subscribersDict, True)
+        self.services = self._createServices ("", self.servicesDict, True)
+        self.pubs = ros_tools.createTopics(self, "/hpp/target", self.publishersDist, subscribe = False)
+
+        self.resetTopics ()
+
+    def resetTopics (self, msg = None):
         self.topics = [
                 self.SentToViewer (self),
                 self.Topic (self._readConfigAtParam, "position", Vector),
                 self.Topic (self._readConfigAtParam, "velocity", Vector),
                 ]
-        self.setJointNames (SetJointNamesRequest(self._hpp().robot.getJointNames()))
-
-        self.subscribers = self._createTopics ("", self.subscribersDict, True)
-        self.services = self._createServices ("", self.servicesDict, True)
+        if msg is not None:
+            return std_srvs.srv.EmptyResponse()
 
     def addCenterOfMass (self, req):
         # TODO check that com exists
@@ -306,6 +319,7 @@ class HppOutputQueue(HppClient):
             updateViewer[-1] = True
         for t, uv in zip(times, updateViewer):
             self.readAt(pathId, t, uv)
+        self.pubs["read_path_done"].publish(msg)
         rospy.loginfo("Finish reading path {}".format(pathId))
 
     def publish(self, empty):
@@ -314,4 +328,5 @@ class HppOutputQueue(HppClient):
         while not self.queue.empty():
             self.publishNext()
             rate.sleep()
+        self.pubs["publish_done"].publish(Empty())
         rospy.loginfo("Finish publishing queue")
