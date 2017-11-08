@@ -8,7 +8,7 @@ def createTopics (object, namespace, topics, subscribe):
     if isinstance(topics, dict):
         rets = dict ()
         for k, v in topics.items():
-            rets[k] = createTopics(namespace + "/" + k, v, subscribe)
+            rets[k] = createTopics(object, namespace + "/" + k, v, subscribe)
         return rets
     else:
         if subscribe:
@@ -27,7 +27,7 @@ def createServices (object, namespace, services, serve):
     if isinstance(services, dict):
         rets = dict ()
         for k, v in services.items():
-            rets[k] = createServices(namespace + "/" + k, v, serve)
+            rets[k] = createServices(object, namespace + "/" + k, v, serve)
             # rets.update(createServices(topic_name, k, v, serve))
         return rets
     else:
