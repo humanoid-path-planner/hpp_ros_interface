@@ -1,4 +1,4 @@
-import rospy
+import rospy, CORBA
 import hpp.corbaserver
 import hpp.corbaserver.robot
 import hpp.corbaserver.manipulation
@@ -9,42 +9,36 @@ import ros_tools
 
 class HppClient(object):
     def __init__ (self, withViewer = False):
-        self.hpp_url = None
         self.withViewer = withViewer
         self.setHppUrl()
 
     def setHppUrl (self):
-        hpphost = rospy.get_param ("/hpp/host", "localhost")
-        hppport = rospy.get_param ("/hpp/port", 2809)
-        url = "corbaloc:iiop:{}:{}/NameService".format(hpphost, hppport)
-        if self.withViewer:
-            self.gvhost = rospy.get_param ("/gepetto_viewer/host", "localhost")
-        if url != self.hpp_url:
-            self.hpp_url = url
-            self._connect()
+        self._connect()
 
     def _connect(self):
-        self.hpp = hpp.corbaserver.Client(url=self.hpp_url)
+        self.hpp = hpp.corbaserver.Client()
         try:
-            self.manip = hpp.corbaserver.manipulation.Client (url = self.hpp_url)
+            self.manip = hpp.corbaserver.manipulation.Client ()
             self.robot = hpp.corbaserver.manipulation.robot.Robot ()
             self.problemSolver = hpp.corbaserver.manipulation.ProblemSolver(self.robot)
-        except:
+        except Exception, e:
+            rospy.logwarn("Could not connect to manipulation server: " + str(e))
             if hasattr(self, "manip"): delattr(self, "manip") 
             self.robot = hpp.corbaserver.robot.Robot()
             self.problemSolver = hpp.corbaserver.ProblemSolver(self.robot)
-        rospy.loginfo("Connected to hpp on " + self.hpp_url)
+        rospy.loginfo("Connected to hpp")
         if self.withViewer:
             try:
                 from gepetto.corbaserver import Client as GuiClient
-                viewerClient = GuiClient (host = self.gvhost)
+                viewerClient = GuiClient ()
                 if hasattr(self, "manip"):
                     self.viewer = hpp.gepetto.manipulation.Viewer (self.problemSolver, viewerClient = viewerClient, displayName = self.hpp.robot.getRobotName())
                 else:
                     self.viewer = hpp.gepetto.Viewer (self.problemSolver, viewerClient = viewerClient)
-                rospy.loginfo("Connected to gepetto-viewer on " + self.gvhost)
+                rospy.loginfo("Connected to gepetto-viewer")
             except Exception, e:
                 if hasattr(self, "viewer"): delattr(self, "viewer") 
+                rospy.logwarn("Could not connect to gepetto-viewer: " + str(e))
 
     def _hpp (self, reconnect = True):
         try:
@@ -58,7 +52,7 @@ class HppClient(object):
         return self.hpp
 
     def _manip (self, reconnect = True):
-        if not hasattr(self, manip):
+        if not hasattr(self, "manip"):
             raise Exception("No manip client")
         try:
             self.manip.problem.getAvailable("type")
