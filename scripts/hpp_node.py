@@ -7,10 +7,10 @@ else:
     import hpp_ros_interface.hpp_server_initializer as hsi
     print "Launching default client"
 
+rospy.init_node('hpp_server_connection')
+
 _pra = pra.PlanningRequestAdapter("/joint_states")
 _hsi = hsi.HppServerInitializer()
 _tp = tp.HppOutputQueue ()
 
-
-rospy.init_node('hpp_server_connection')
 rospy.spin()
