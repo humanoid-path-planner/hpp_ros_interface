@@ -35,10 +35,12 @@ find_package(catkin REQUIRED COMPONENTS rospy std_msgs sensor_msgs geometry_msgs
 add_service_files(FILES
     SetJointNames.srv
     SetString.srv
+    PlugSot.srv
   )
 
 add_message_files(FILES
     PlanningGoal.msg
+    ReadSubPath.msg
     ProblemSolved.msg)
 
 generate_messages(DEPENDENCIES std_msgs sensor_msgs geometry_msgs)
@@ -61,6 +63,11 @@ INSTALL(FILES
   src/hpp_ros/manipulation/hpp_server_initializer.py
   src/hpp_ros/manipulation/__init__.py
   DESTINATION ${CATKIN_PACKAGE_PYTHON_DESTINATION}/manipulation)
+
+INSTALL(FILES
+  src/hpp_ros/smach_initializer/__init__.py
+  src/hpp_ros/smach_initializer/play_path.py
+  DESTINATION ${CATKIN_PACKAGE_PYTHON_DESTINATION}/smach_initializer)
 
 INSTALL(PROGRAMS scripts/hpp_node.py
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/scripts)
