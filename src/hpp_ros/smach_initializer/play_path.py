@@ -140,9 +140,6 @@ class WaitForInput(smach.State):
                     }
                 }
             }
-    subscribersDict = {
-            "start_path": [ UInt32, "start" ],
-            }
 
     def __init__(self):
         super(WaitForInput, self).__init__(
@@ -151,21 +148,13 @@ class WaitForInput(smach.State):
                 output_keys = [ "pathId", "times", "currentSection" ],
                 )
 
-        self.subscribers = ros_tools.createTopics (self, "/sm_sot_hpp", self.subscribersDict, subscribe = True)
         self.services = ros_tools.createServices (self, "", self.serviceProxiesDict, serve = False)
         self.hppclient = HppClient (False)
-        self.request = None
-
-    def start (self, msg):
-        self.request = msg
-        rospy.loginfo("Requested to start path " + str(self.request.data))
 
     def execute (self, userdata):
-        rate = rospy.Rate (1000)
-        while self.request is None:
-            rate.sleep()
-        pid = self.request.data
-        self.request = None
+        res = rospy.wait_for_message ("/sm_sot_hpp/start_path", UInt32)
+        pid = res.data
+        rospy.loginfo("Requested to start path " + str(pid))
         userdata.pathId = pid
         try:
             hpp = self.hppclient._hpp()
