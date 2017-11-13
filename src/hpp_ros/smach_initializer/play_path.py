@@ -50,9 +50,7 @@ class InitializePath(smach.State):
         hpp = self.hppclient._hpp()
         manip = self.hppclient._manip()
         print userdata.pathId, start + length / 2
-        # rospy.sleep(3)
         userdata.transitionId = manip.problem.edgeAtParam(userdata.pathId, start + length / 2)
-        # rospy.sleep(3)
         # userdata.transitionId = manip.problem.edgeAtParam(userdata.pathId, start)
 
         self.targetPub["read_subpath"].publish (ReadSubPath (userdata.pathId, start, length))
@@ -159,10 +157,12 @@ class WaitForInput(smach.State):
         try:
             hpp = self.hppclient._hpp()
             qs, ts = hpp.problem.getWaypoints(pid)
-            userdata.times = ts
+            # Add a first section to force going to init pose.
+            userdata.times = ts[0:1] + ts
             userdata.currentSection = -1
-            self.services['hpp']['target']['reset_topics']()
-            self.services['sot']['request_hpp_topics']()
+            # TODO this should not be necessary
+            # self.services['hpp']['target']['reset_topics']()
+            # self.services['sot']['request_hpp_topics']()
             # TODO check that qs[0] and the current robot configuration are
             # close
         except Exception, e:
