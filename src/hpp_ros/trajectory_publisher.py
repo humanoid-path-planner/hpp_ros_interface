@@ -187,8 +187,8 @@ class HppOutputQueue(HppClient):
     def resetTopics (self, msg = None):
         self.topics = [
                 self.SentToViewer (self),
-                self.Topic (self._readConfigAtParam, "position", Vector),
-                self.Topic (self._readConfigAtParam, "velocity", Vector),
+                self.Topic (self._readConfigAtParam  , "position", Vector),
+                self.Topic (self._readVelocityAtParam, "velocity", Vector),
                 ]
         hpp = self._hpp()
         self.topics[1].init(hpp)
