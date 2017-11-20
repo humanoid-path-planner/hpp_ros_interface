@@ -69,7 +69,9 @@ class PlayPath (smach.State):
             }
     serviceProxiesDict = {
             'sot': {
+                'run_pre_action': [ PlugSot, ],
                 'plug_sot': [ PlugSot, ],
+                'run_post_action': [ PlugSot, ],
                 'clear_queues': [ std_srvs.srv.Trigger, ],
                 }
             }
@@ -87,7 +89,7 @@ class PlayPath (smach.State):
         self.done = False
         self.error = None
         self.interruption = None
-        self.control_norm_ok = False
+        self.control_norm_ok = True
 
     def handleError (self, msg):
         self.error = msg.data
@@ -104,7 +106,16 @@ class PlayPath (smach.State):
         self.control_norm_ok = msg.data < 1e-2
 
     def execute(self, userdata):
+        rate = rospy.Rate (1000)
+
         # TODO Check that there the current SOT and the future SOT are compatible ?
+        rospy.loginfo("Run pre-action")
+        status = self.serviceProxies['sot']['run_pre_action'](userdata.transitionId)
+        rospy.sleep(0.5)
+        rospy.loginfo("Wait for event on /sot_hpp/control_norm_changed")
+        while not self.control_norm_ok:
+            rate.sleep()
+
         status = self.serviceProxies['sot']['plug_sot'](userdata.transitionId)
         if not status.success:
             rospy.logerr(status.msg)
@@ -115,7 +126,6 @@ class PlayPath (smach.State):
         self.serviceProxies['sot']['clear_queues']()
         self.targetPub["publish"].publish(Empty())
         # Wait for errors or publish done
-        rate = rospy.Rate (1000)
         while not self.done:
             if self.error is not None:
                 # TODO handle error
@@ -128,6 +138,14 @@ class PlayPath (smach.State):
             rospy.logerr(str(self.interruption))
             self.interruption = None
             return _outcomes[2]
+        rospy.loginfo("Wait for event on /sot_hpp/control_norm_changed")
+        while not self.control_norm_ok:
+            rate.sleep()
+
+        # Run post action if any
+        rospy.loginfo("Run post-action")
+        status = self.serviceProxies['sot']['run_post_action'](userdata.endStateId)
+        rospy.sleep(1)
         rospy.loginfo("Wait for event on /sot_hpp/control_norm_changed")
         while not self.control_norm_ok:
             rate.sleep()
