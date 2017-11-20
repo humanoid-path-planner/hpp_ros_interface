@@ -134,7 +134,7 @@ class HppOutputQueue(HppClient):
     class Topic (object):
         def __init__ (self, reader, topicPub, MsgType, data = None):
             self.reader = reader
-            self.pub = rospy.Publisher("/hpp/target/" + topicPub, MsgType, latch=True, queue_size=1)
+            self.pub = rospy.Publisher("/hpp/target/" + topicPub, MsgType, latch=True, queue_size=1000)
             self.MsgType = MsgType
             self.data = data
 
