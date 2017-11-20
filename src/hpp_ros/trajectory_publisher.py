@@ -168,9 +168,9 @@ class HppOutputQueue(HppClient):
             self.parent.viewer.client.gui.refresh()
 
     def __init__ (self):
-        super(HppOutputQueue, self).__init__ (withViewer = True)
+        super(HppOutputQueue, self).__init__ (withViewer = False)
 
-        self.frequency = 75 # Hz
+        self.frequency = 200 # Hz
         self.viewerFreq = 25 # Hz
         self.queue_size = 10 * self.frequency
         self.queue = Queue.Queue (self.queue_size)
