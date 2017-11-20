@@ -24,8 +24,8 @@ class InitializePath(smach.State):
     def __init__(self):
         super(InitializePath, self).__init__(
                 outcomes = _outcomes,
-                input_keys = [ "pathId", "times", "currentSection" ],
-                output_keys = [ "transitionId", "currentSection" ],
+                input_keys = [ "pathId", "times", "transitionIds", "endStateIds", "currentSection" ],
+                output_keys = [ "transitionId", "endStateId", "currentSection" ],
                 )
 
         self.targetSrv = ros_tools.createServices (self, "/hpp/target", self.hppTargetSrvDict, serve=False)
@@ -39,11 +39,8 @@ class InitializePath(smach.State):
         start = userdata.times[userdata.currentSection]
         length = userdata.times[userdata.currentSection + 1] - start
 
-        hpp = self.hppclient._hpp()
-        manip = self.hppclient._manip()
-        print userdata.pathId, start + length / 2
-        userdata.transitionId = manip.problem.edgeAtParam(userdata.pathId, start + length / 2)
-        # userdata.transitionId = manip.problem.edgeAtParam(userdata.pathId, start)
+        userdata.transitionId = userdata.transitionIds[userdata.currentSection]
+        userdata.endStateId = userdata.endStateIds[userdata.currentSection]
 
         if rospy.get_param ("/sm_sot_hpp/step_by_step", False):
             rospy.loginfo("Wait for message on /sm_sot_hpp/step.")
@@ -80,7 +77,7 @@ class PlayPath (smach.State):
     def __init__(self):
         super(PlayPath, self).__init__(
                 outcomes = _outcomes,
-                input_keys = [ "transitionId", ],
+                input_keys = [ "transitionId", "endStateId", ],
                 output_keys = [ ])
 
         self.targetPub = ros_tools.createTopics (self, "/hpp/target", self.hppTargetPubDict, subscribe=False)
@@ -153,7 +150,7 @@ class WaitForInput(smach.State):
         super(WaitForInput, self).__init__(
                 outcomes = [ "succeeded", "aborted" ],
                 input_keys = [ ],
-                output_keys = [ "pathId", "times", "currentSection" ],
+                output_keys = [ "pathId", "times", "transitionIds", "endStateIds", "currentSection" ],
                 )
 
         self.services = ros_tools.createServices (self, "", self.serviceProxiesDict, serve = False)
@@ -167,9 +164,28 @@ class WaitForInput(smach.State):
         userdata.pathId = pid
         try:
             hpp = self.hppclient._hpp()
+            manip = self.hppclient._manip()
             qs, ts = hpp.problem.getWaypoints(pid)
             # Add a first section to force going to init pose.
-            userdata.times = ts[0:1] + ts
+            ts = ts[0:1] + ts
+            tids = [ manip.problem.edgeAtParam(pid, (t0 + t1) / 2) for t0,t1 in zip(ts[:-1], ts[1:]) ]
+            print len(qs), len(ts), len(tids)
+            # Remove fake transitions
+            tts = ts[0:3]
+            ttids = tids[0:2]
+            tqs = qs[0:2]
+            for t, id, q in zip(ts[2:], tids[1:], qs[1:]):
+                if ttids[-1] == id:
+                    tts[-1] = t
+                    tqs[-1] = q
+                else:
+                    ttids.append (id)
+                    tts.append(t)
+                    tqs.append(q)
+
+            userdata.times = tts
+            userdata.transitionIds = ttids
+            userdata.endStateIds = tuple ([manip.graph.getNode(q) for q in tqs])
             userdata.currentSection = -1
             # TODO this should not be necessary
             self.services['hpp']['target']['reset_topics']()
@@ -192,6 +208,8 @@ def makeStateMachine():
                 remapping = {
                     "pathId": "pathId",
                     "times": "times",
+                    "transitionIds": "transitionIds",
+                    "endStateIds": "endStateIds",
                     "currentSection": "currentSection",
                     })
         smach.StateMachine.add ('Init', InitializePath(),
