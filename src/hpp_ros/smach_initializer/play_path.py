@@ -126,11 +126,12 @@ class PlayPath (smach.State):
                 self.error = None
                 return _outcomes[1]
             rate.sleep()
+        rospy.loginfo("Publishing path done.")
         if self.interruption is not None:
             rospy.logerr(str(self.interruption))
             self.interruption = None
             return _outcomes[2]
-        print "Wait for event on /sot_hpp/control_norm_changed"
+        rospy.loginfo("Wait for event on /sot_hpp/control_norm_changed")
         while not self.control_norm_ok:
             rate.sleep()
         return _outcomes[0]
