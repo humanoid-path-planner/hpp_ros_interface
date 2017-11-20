@@ -45,8 +45,12 @@ class InitializePath(smach.State):
         userdata.transitionId = manip.problem.edgeAtParam(userdata.pathId, start + length / 2)
         # userdata.transitionId = manip.problem.edgeAtParam(userdata.pathId, start)
 
+        if rospy.get_param ("/sm_sot_hpp/step_by_step", False):
+            rospy.loginfo("Wait for message on /sm_sot_hpp/step.")
+            rospy.wait_for_message ("/sm_sot_hpp/step", Empty)
+
         self.targetPub["read_subpath"].publish (ReadSubPath (userdata.pathId, start, length))
-        print "Start reading subpath. Waiting for one second."
+        rospy.loginfo("Start reading subpath. Waiting for one second.")
         rospy.sleep(1)
         return _outcomes[2]
 
