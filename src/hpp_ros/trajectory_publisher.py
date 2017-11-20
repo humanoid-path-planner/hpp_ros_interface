@@ -326,7 +326,7 @@ class HppOutputQueue(HppClient):
     def _read (self, pathId, start, L):
         from math import ceil, floor
         N = int(ceil(abs(L) * self.frequency))
-        rospy.loginfo("Start reading path {} into {} points".format(pathId, N+1))
+        rospy.loginfo("Start reading path {} (t in [ {}, {} ]) into {} points".format(pathId, start, start + L, N+1))
         self.reading = True
         self.queue = Queue.Queue (self.queue_size)
         times = (-1 if L < 0 else 1 ) *np.array(range(N+1), dtype=float) / self.frequency
@@ -354,11 +354,15 @@ class HppOutputQueue(HppClient):
 
     def publish(self, empty):
         rospy.loginfo("Start publishing queue (size is {})".format(self.queue.qsize()))
-        rate = rospy.Rate (self.frequency)
-        while not self.queue.empty():
-            self.publishNext()
+        i = 0
+        rate = rospy.Rate (5*self.frequency)
+        while not self.queue.empty() or self.reading:
+            while not self.queue.empty():
+                self.publishNext()
+                i += 1
+                rate.sleep()
             rate.sleep()
         if self.reading:
             rospy.logwarn("Stop publishing while still reading. Consider increasing the queue.")
         self.pubs["publish_done"].publish(Empty())
-        rospy.loginfo("Finish publishing queue")
+        rospy.loginfo("Finish publishing queue ({})".format(i))
