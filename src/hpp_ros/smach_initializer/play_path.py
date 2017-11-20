@@ -72,7 +72,8 @@ class PlayPath (smach.State):
             }
     serviceProxiesDict = {
             'sot': {
-                'plug_sot': [ PlugSot, ]
+                'plug_sot': [ PlugSot, ],
+                'clear_queues': [ std_srvs.srv.Trigger, ],
                 }
             }
 
@@ -114,6 +115,7 @@ class PlayPath (smach.State):
 
         self.done = False
         # self.control_norm_ok = False
+        self.serviceProxies['sot']['clear_queues']()
         self.targetPub["publish"].publish(Empty())
         # Wait for errors or publish done
         rate = rospy.Rate (1000)
