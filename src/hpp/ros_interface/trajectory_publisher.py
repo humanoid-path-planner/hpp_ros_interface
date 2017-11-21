@@ -8,6 +8,7 @@ import ros_tools
 from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
 from sensor_msgs.msg import JointState
 import Queue
+from collections import deque
 from dynamic_graph_bridge_msgs.msg import Vector
 from geometry_msgs.msg import Vector3, Quaternion, Transform
 from std_msgs.msg import UInt32, Empty
@@ -168,12 +169,13 @@ class HppOutputQueue(HppClient):
             self.parent.viewer.client.gui.refresh()
 
     def __init__ (self):
-        super(HppOutputQueue, self).__init__ (withViewer = False)
+        super(HppOutputQueue, self).__init__ (withViewer = True)
 
         self.frequency = 200 # Hz
         self.viewerFreq = 25 # Hz
         self.queue_size = 10 * self.frequency
         self.queue = Queue.Queue (self.queue_size)
+        self.queueViewer = deque ()
 
         self.setJointNames (SetJointNamesRequest(self._hpp().robot.getJointNames()))
 
@@ -185,14 +187,14 @@ class HppOutputQueue(HppClient):
         self.resetTopics ()
 
     def resetTopics (self, msg = None):
+        self.topicViewer = self.SentToViewer (self)
         self.topics = [
-                self.SentToViewer (self),
                 self.Topic (self._readConfigAtParam  , "position", Vector),
                 self.Topic (self._readVelocityAtParam, "velocity", Vector),
                 ]
         hpp = self._hpp()
+        self.topics[0].init(hpp)
         self.topics[1].init(hpp)
-        self.topics[2].init(hpp)
         rospy.loginfo("Reset topics")
         if msg is not None:
             return std_srvs.srv.EmptyResponse()
@@ -312,8 +314,10 @@ class HppOutputQueue(HppClient):
         hpp = self._hpp()
         hpp.robot.setCurrentConfig( hpp.problem.configAtParam (pathId, time))
         hpp.robot.setCurrentVelocity( hpp.problem.velocityAtParam (pathId, time))
-        msgs = [ self.topics[0].read (hpp, uv), ]
-        for topic in self.topics[1:]:
+        if uv:
+            self.queueViewer.append ((time, self.topicViewer.read (hpp, uv)))
+        msgs = []
+        for topic in self.topics:
             msgs.append (topic.read(hpp))
         self.queue.put (msgs, True)
 
