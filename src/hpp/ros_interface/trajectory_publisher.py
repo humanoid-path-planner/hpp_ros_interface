@@ -1,13 +1,14 @@
 #!/usr/bin/env python
 import rospy, hpp.corbaserver
 import numpy as np
-from hpp_ros_interface.client import HppClient
+from .client import HppClient
 from hpp_ros_interface.msg import *
 from hpp_ros_interface.srv import *
 import ros_tools
 from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
 from sensor_msgs.msg import JointState
 import Queue
+from collections import deque
 from dynamic_graph_bridge_msgs.msg import Vector
 from geometry_msgs.msg import Vector3, Quaternion, Transform
 from std_msgs.msg import UInt32, Empty
@@ -134,7 +135,7 @@ class HppOutputQueue(HppClient):
     class Topic (object):
         def __init__ (self, reader, topicPub, MsgType, data = None):
             self.reader = reader
-            self.pub = rospy.Publisher("/hpp/target/" + topicPub, MsgType, latch=True, queue_size=1)
+            self.pub = rospy.Publisher("/hpp/target/" + topicPub, MsgType, latch=True, queue_size=1000)
             self.MsgType = MsgType
             self.data = data
 
@@ -170,10 +171,11 @@ class HppOutputQueue(HppClient):
     def __init__ (self):
         super(HppOutputQueue, self).__init__ (withViewer = True)
 
-        self.frequency = 75 # Hz
+        self.frequency = 200 # Hz
         self.viewerFreq = 25 # Hz
         self.queue_size = 10 * self.frequency
         self.queue = Queue.Queue (self.queue_size)
+        self.queueViewer = deque ()
 
         self.setJointNames (SetJointNamesRequest(self._hpp().robot.getJointNames()))
 
@@ -185,14 +187,14 @@ class HppOutputQueue(HppClient):
         self.resetTopics ()
 
     def resetTopics (self, msg = None):
+        self.topicViewer = self.SentToViewer (self)
         self.topics = [
-                self.SentToViewer (self),
-                self.Topic (self._readConfigAtParam, "position", Vector),
-                self.Topic (self._readConfigAtParam, "velocity", Vector),
+                self.Topic (self._readConfigAtParam  , "position", Vector),
+                self.Topic (self._readVelocityAtParam, "velocity", Vector),
                 ]
         hpp = self._hpp()
+        self.topics[0].init(hpp)
         self.topics[1].init(hpp)
-        self.topics[2].init(hpp)
         rospy.loginfo("Reset topics")
         if msg is not None:
             return std_srvs.srv.EmptyResponse()
@@ -312,8 +314,10 @@ class HppOutputQueue(HppClient):
         hpp = self._hpp()
         hpp.robot.setCurrentConfig( hpp.problem.configAtParam (pathId, time))
         hpp.robot.setCurrentVelocity( hpp.problem.velocityAtParam (pathId, time))
-        msgs = [ self.topics[0].read (hpp, uv), ]
-        for topic in self.topics[1:]:
+        if uv:
+            self.queueViewer.append ((time, self.topicViewer.read (hpp, uv)))
+        msgs = []
+        for topic in self.topics:
             msgs.append (topic.read(hpp))
         self.queue.put (msgs, True)
 
@@ -323,10 +327,21 @@ class HppOutputQueue(HppClient):
             topic.publish (msg)
         self.queue.task_done()
 
+    def publishViewerAtTime (self, time):
+        if hasattr(self, "viewer"):
+            while len(self.queueViewer) > 0:
+                # There is no message in queueViewer
+                t, msg = self.queueViewer[0]
+                if t < time - 1. / self.frequency:
+                    self.topicViewer.publish (msg)
+                    self.queueViewer.popleft()
+                else:
+                    break
+
     def _read (self, pathId, start, L):
         from math import ceil, floor
         N = int(ceil(abs(L) * self.frequency))
-        rospy.loginfo("Start reading path {} into {} points".format(pathId, N+1))
+        rospy.loginfo("Start reading path {} (t in [ {}, {} ]) into {} points".format(pathId, start, start + L, N+1))
         self.reading = True
         self.queue = Queue.Queue (self.queue_size)
         times = (-1 if L < 0 else 1 ) *np.array(range(N+1), dtype=float) / self.frequency
@@ -354,11 +369,15 @@ class HppOutputQueue(HppClient):
 
     def publish(self, empty):
         rospy.loginfo("Start publishing queue (size is {})".format(self.queue.qsize()))
-        rate = rospy.Rate (self.frequency)
-        while not self.queue.empty():
-            self.publishNext()
+        i = 0
+        rate = rospy.Rate (5*self.frequency)
+        while not self.queue.empty() or self.reading:
+            while not self.queue.empty():
+                self.publishNext()
+                i += 1
+                rate.sleep()
             rate.sleep()
         if self.reading:
             rospy.logwarn("Stop publishing while still reading. Consider increasing the queue.")
         self.pubs["publish_done"].publish(Empty())
-        rospy.loginfo("Finish publishing queue")
+        rospy.loginfo("Finish publishing queue ({})".format(i))

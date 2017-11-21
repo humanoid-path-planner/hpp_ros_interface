@@ -2,9 +2,9 @@ import smach, smach_ros, rospy
 from std_msgs.msg import UInt32, Empty, String, Float64
 from hpp_ros_interface.srv import *
 from hpp_ros_interface.msg import *
-from hpp_ros_interface.client import HppClient
+from hpp.ros_interface.client import HppClient
 import std_srvs.srv
-from hpp_ros_interface import ros_tools
+from hpp.ros_interface import ros_tools
 
 _outcomes = ["succeeded", "aborted", "preempted"]
 
