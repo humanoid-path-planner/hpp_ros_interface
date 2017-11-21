@@ -327,6 +327,17 @@ class HppOutputQueue(HppClient):
             topic.publish (msg)
         self.queue.task_done()
 
+    def publishViewerAtTime (self, time):
+        if hasattr(self, "viewer"):
+            while len(self.queueViewer) > 0:
+                # There is no message in queueViewer
+                t, msg = self.queueViewer[0]
+                if t < time - 1. / self.frequency:
+                    self.topicViewer.publish (msg)
+                    self.queueViewer.popleft()
+                else:
+                    break
+
     def _read (self, pathId, start, L):
         from math import ceil, floor
         N = int(ceil(abs(L) * self.frequency))
