@@ -1,4 +1,4 @@
-from hpp_ros_interface.smach_initializer import makeStateMachine
+from hpp.ros_interface.smach_initializer import makeStateMachine
 import rospy
 
 rospy.init_node ('sm_sot_hpp')
