@@ -5,7 +5,7 @@ from hpp.gepetto.manipulation import ViewerFactory
 import hpp.corbaserver.manipulation, hpp.corbaserver.manipulation.robot
 # from hpp.corbaserver import Robot, ProblemSolver
 
-from hpp_ros_interface.hpp_server_initializer import HppServerInitializer as _Parent
+from hpp.ros_interface.hpp_server_initializer import HppServerInitializer as _Parent
 from hpp_ros_interface.msg import ProblemSolved
 from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
 from sensor_msgs.msg import JointState

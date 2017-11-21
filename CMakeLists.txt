@@ -19,7 +19,7 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
 
 INCLUDE(cmake/base.cmake)
-# INCLUDE(cmake/python.cmake)
+INCLUDE(cmake/python.cmake)
 
 SET(PROJECT_NAME hpp_ros_interface)
 SET(PROJECT_DESCRIPTION "")
@@ -28,6 +28,7 @@ SET(PROJECT_VERSION "")
 
 SET(INSTALL_DOCUMENTATION OFF)
 SETUP_PROJECT()
+FINDPYTHON(2.7 REQUIRED EXACT)
 # PROJECT(hpp_ros_interface)
 
 find_package(catkin REQUIRED COMPONENTS rospy std_msgs sensor_msgs geometry_msgs message_generation)
@@ -50,24 +51,7 @@ ADD_OPTIONAL_DEPENDENCY("hpp-corbaserver")
 ADD_OPTIONAL_DEPENDENCY("hpp-manipulation-corba")
 ADD_OPTIONAL_DEPENDENCY("dynamic_graph_bridge_msgs")
 
-INSTALL(FILES
-  src/hpp_ros/trajectory_publisher.py
-  src/hpp_ros/planning_request_adapter.py
-  src/hpp_ros/hpp_server_initializer.py
-  src/hpp_ros/client.py
-  src/hpp_ros/ros_tools.py
-  src/hpp_ros/__init__.py
-  DESTINATION ${CATKIN_PACKAGE_PYTHON_DESTINATION})
-
-INSTALL(FILES
-  src/hpp_ros/manipulation/hpp_server_initializer.py
-  src/hpp_ros/manipulation/__init__.py
-  DESTINATION ${CATKIN_PACKAGE_PYTHON_DESTINATION}/manipulation)
-
-INSTALL(FILES
-  src/hpp_ros/smach_initializer/__init__.py
-  src/hpp_ros/smach_initializer/play_path.py
-  DESTINATION ${CATKIN_PACKAGE_PYTHON_DESTINATION}/smach_initializer)
+ADD_SUBDIRECTORY(src)
 
 INSTALL(PROGRAMS scripts/hpp_node.py
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/scripts)
