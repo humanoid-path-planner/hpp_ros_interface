@@ -306,12 +306,12 @@ class HppOutputQueue(HppClient):
         t = client.robot.getJointVelocity(data)
         return Vector(t)
 
-    def readAt (self, pathId, time, uv = False):
+    def readAt (self, pathId, time, uv = False, timeShift = 0):
         hpp = self._hpp()
         hpp.robot.setCurrentConfig( hpp.problem.configAtParam (pathId, time))
         hpp.robot.setCurrentVelocity( hpp.problem.velocityAtParam (pathId, time))
         if uv:
-            self.queueViewer.append ((time, self.topicViewer.read (hpp, uv)))
+            self.queueViewer.append ((time - timeShift, self.topicViewer.read (hpp, uv)))
         msgs = []
         for topic in self.topics:
             msgs.append (topic.read(hpp))
@@ -349,7 +349,7 @@ class HppOutputQueue(HppClient):
             for i in range(0,len(updateViewer), Nv): updateViewer[i] = True
             updateViewer[-1] = True
         for t, uv in zip(times, updateViewer):
-            self.readAt(pathId, t, uv)
+            self.readAt(pathId, t, uv, timeShift = start)
         self.pubs["read_path_done"].publish(UInt32(pathId))
         rospy.loginfo("Finish reading path {}".format(pathId))
         self.reading = False
@@ -364,16 +364,25 @@ class HppOutputQueue(HppClient):
         self._read (msg.id, msg.start, msg.length)
 
     def publish(self, empty):
+        import time
         rospy.loginfo("Start publishing queue (size is {})".format(self.queue.qsize()))
-        i = 0
-        rate = rospy.Rate (5*self.frequency)
+        # The queue in SOT should have about 100ms of points
+        n = 0
+        advance = 0.1 * self.frequency
+        start = time.time()
+        rate = rospy.Rate (self.frequency)
         while not self.queue.empty() or self.reading:
-            while not self.queue.empty():
+            dt = time.time() - start
+            nstar = advance + dt * self.frequency
+            while n < nstar and not self.queue.empty():
                 self.publishNext()
-                i += 1
-                rate.sleep()
+                n += 1
+            self.publishViewerAtTime(dt)
             rate.sleep()
-        if self.reading:
-            rospy.logwarn("Stop publishing while still reading. Consider increasing the queue.")
+        rate = rospy.Rate(self.viewerFreq)
+        while len(self.queueViewer) > 0:
+            dt = time.time() - start
+            self.publishViewerAtTime(dt)
+            rate.sleep()
         self.pubs["publish_done"].publish(Empty())
-        rospy.loginfo("Finish publishing queue ({})".format(i))
+        rospy.loginfo("Finish publishing queue ({})".format(n))
