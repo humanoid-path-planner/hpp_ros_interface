@@ -252,12 +252,12 @@ class HppOutputQueue(HppClient):
             segments = None
             for jn in jns:
                 szs = [hpp.robot.getJointConfigSize(jn), hpp.robot.getJointNumberDof(jn)] if jn is not None else [0,0]
-                if jn in req.names: # print "[in ]", jn
+                if jn in req.names:
                     if segments is None:
                         segments = [ [rks[0], rks[0] + szs[0]], [rks[1], rks[1] + szs[1]] ]
                     else:
                         for i in range(2): segments[i][1] += szs[i]
-                else: # print "[out]", jn
+                else:
                     if segments is not None: # insert previous segments
                         joint_selection[0].append(segments[0])
                         joint_selection[1].append(segments[1])
@@ -265,7 +265,6 @@ class HppOutputQueue(HppClient):
                 for i in range(2): rks[i] += szs[i]
             self.jointNames = req.names
             self.joint_selection = joint_selection
-            # print self.joint_selection
         except:
             return SetJointNamesResponse(False)
         rospy.loginfo("Joint names set to " + str(self.jointNames))
@@ -274,11 +273,8 @@ class HppOutputQueue(HppClient):
     def _readConfigAtParam (self, client, data):
         qin = client.robot.getCurrentConfig()
         qout = list()
-        # vout = list()
         for segment in self.joint_selection[0]:
             qout.extend(qin[segment[0]:segment[1]])
-        # for segment in self.joint_selection[1]:
-            # vout.extend(vin[segment[0]:segment[1]])
         return Vector(qout)
 
     def _readVelocityAtParam (self, client, data):
