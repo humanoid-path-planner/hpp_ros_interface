@@ -268,6 +268,11 @@ class HppOutputQueue(HppClient):
         except:
             return SetJointNamesResponse(False)
         rospy.loginfo("Joint names set to " + str(self.jointNames))
+        self.hasRootJoint = False
+        for n in self.jointNames:
+            if n.endswith("root_joint"):
+                self.hasRootJoint = (hpp.robot.getJointConfigSize(n) == 7)
+                break
         return SetJointNamesResponse(True)
 
     def _readConfigAtParam (self, client, data):
@@ -275,6 +280,10 @@ class HppOutputQueue(HppClient):
         qout = list()
         for segment in self.joint_selection[0]:
             qout.extend(qin[segment[0]:segment[1]])
+        if self.hasRootJoint:
+            from hpp import Quaternion
+            q = Quaternion(qin[3:7])
+            qout[3:7] = q.toRPY()
         return Vector(qout)
 
     def _readVelocityAtParam (self, client, data):
