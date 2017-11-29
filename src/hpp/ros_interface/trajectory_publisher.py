@@ -312,7 +312,7 @@ class HppOutputQueue(HppClient):
         return listToTransform(t)
 
     def _readJointVelocity (self, client, data):
-        t = client.robot.getJointVelocity(data)
+        t = client.robot.getJointVelocityInLocalFrame(data)
         return Vector(t)
 
     def readAt (self, pathId, time, uv = False, timeShift = 0):
