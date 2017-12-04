@@ -3,7 +3,7 @@ import rospy, hpp.corbaserver
 from tf import TransformListener
 from .client import HppClient
 from .trajectory_publisher import JointPathCommandPublisher
-from hpp_ros_interface.msg import ProblemSolved, PlanningGoal
+from sot_hpp_msgs.msg import ProblemSolved, PlanningGoal
 from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
 from sensor_msgs.msg import JointState
 from std_msgs.msg import String, Empty, Bool
