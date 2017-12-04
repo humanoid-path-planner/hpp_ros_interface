@@ -29,24 +29,7 @@ SET(PROJECT_VERSION "")
 SET(INSTALL_DOCUMENTATION OFF)
 SETUP_PROJECT()
 FINDPYTHON(2.7 REQUIRED EXACT)
-# PROJECT(hpp_ros_interface)
 
-find_package(catkin REQUIRED COMPONENTS rospy std_msgs sensor_msgs geometry_msgs message_generation)
-
-add_service_files(FILES
-    SetJointNames.srv
-    SetString.srv
-    PlugSot.srv
-  )
-
-add_message_files(FILES
-    PlanningGoal.msg
-    ReadSubPath.msg
-    ProblemSolved.msg)
-
-generate_messages(DEPENDENCIES std_msgs sensor_msgs geometry_msgs)
-
-catkin_package(DEPENDS message_runtime)
 ADD_OPTIONAL_DEPENDENCY("hpp-corbaserver")
 ADD_OPTIONAL_DEPENDENCY("hpp-manipulation-corba")
 ADD_OPTIONAL_DEPENDENCY("dynamic_graph_bridge_msgs")

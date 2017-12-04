@@ -1,4 +1,0 @@
-int32 transition_id
----
-bool success
-string msg

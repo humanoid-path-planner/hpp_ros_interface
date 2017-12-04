@@ -1,4 +1,0 @@
-uint32 inPathId
-float64 atDistance
----
-float64[] ret
