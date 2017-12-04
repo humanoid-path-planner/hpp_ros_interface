@@ -30,6 +30,16 @@ SET(INSTALL_DOCUMENTATION OFF)
 SETUP_PROJECT()
 FINDPYTHON(2.7 REQUIRED EXACT)
 
+find_package(catkin REQUIRED COMPONENTS
+  dynamic_graph_bridge_msgs
+  geometry_msgs
+  sensor_msgs
+  sot_hpp_msgs
+  std_msgs
+  trajectory_msgs)
+
+catkin_package()
+
 ADD_OPTIONAL_DEPENDENCY("hpp-corbaserver")
 ADD_OPTIONAL_DEPENDENCY("hpp-manipulation-corba")
 ADD_OPTIONAL_DEPENDENCY("dynamic_graph_bridge_msgs")
