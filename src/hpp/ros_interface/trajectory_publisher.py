@@ -2,8 +2,8 @@
 import rospy, hpp.corbaserver
 import numpy as np
 from .client import HppClient
-from hpp_ros_interface.msg import *
-from hpp_ros_interface.srv import *
+from sot_hpp_msgs.msg import *
+from sot_hpp_msgs.srv import *
 import ros_tools
 from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
 from sensor_msgs.msg import JointState
@@ -312,7 +312,7 @@ class HppOutputQueue(HppClient):
         return listToTransform(t)
 
     def _readJointVelocity (self, client, data):
-        t = client.robot.getJointVelocity(data)
+        t = client.robot.getJointVelocityInLocalFrame(data)
         return Vector(t)
 
     def readAt (self, pathId, time, uv = False, timeShift = 0):
@@ -377,8 +377,9 @@ class HppOutputQueue(HppClient):
         rospy.loginfo("Start publishing queue (size is {})".format(self.queue.qsize()))
         # The queue in SOT should have about 100ms of points
         n = 0
-        advance = 0.1 * self.frequency
+        advance = 1. * self.frequency
         start = time.time()
+        highrate = rospy.Rate (5 * self.frequency)
         rate = rospy.Rate (self.frequency)
         while not self.queue.empty() or self.reading:
             dt = time.time() - start
@@ -386,6 +387,7 @@ class HppOutputQueue(HppClient):
             while n < nstar and not self.queue.empty():
                 self.publishNext()
                 n += 1
+                highrate.sleep()
             self.publishViewerAtTime(dt)
             rate.sleep()
         rate = rospy.Rate(self.viewerFreq)
