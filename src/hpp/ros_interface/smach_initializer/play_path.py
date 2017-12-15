@@ -117,17 +117,18 @@ class PlayPath (smach.State):
         while not self.control_norm_ok:
             rate.sleep()
 
+        rospy.loginfo("Publishing path")
+        self.done = False
+        self.serviceProxies['sot']['clear_queues']()
+        self.targetPub["publish"].publish()
+        rospy.sleep(1)
+
         status = self.serviceProxies['sot']['plug_sot'](userdata.transitionId)
         if not status.success:
             rospy.logerr(status.msg)
             return _outcomes[1]
 
-        rospy.loginfo("Publishing path")
-        self.done = False
         # self.control_norm_ok = False
-        self.serviceProxies['sot']['clear_queues']()
-        self.targetPub["publish"].publish(Empty())
-        rospy.sleep(1)
         rospy.loginfo("Read queue")
         self.serviceProxies['sot']['read_queue'](True)
         # Wait for errors or publish done
