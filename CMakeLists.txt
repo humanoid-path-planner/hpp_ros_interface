@@ -46,7 +46,9 @@ ADD_OPTIONAL_DEPENDENCY("dynamic_graph_bridge_msgs")
 
 ADD_SUBDIRECTORY(src)
 
-INSTALL(PROGRAMS scripts/hpp_node.py
+INSTALL(PROGRAMS
+  scripts/hpp_node.py
+  scripts/smach_node.py
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/scripts)
 INSTALL(DIRECTORY launch
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
