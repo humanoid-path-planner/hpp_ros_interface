@@ -135,16 +135,14 @@ class HppOutputQueue(HppClient):
     class Topic (object):
         def __init__ (self, reader, topicPub, MsgType, data = None):
             self.reader = reader
-            self.pub = rospy.Publisher("/hpp/target/" + topicPub, MsgType, latch=True, queue_size=1000)
+            self.pub = rospy.Publisher("/hpp/target/" + topicPub, MsgType, latch=False, queue_size=1000)
             self.MsgType = MsgType
             self.data = data
 
         def init (self, hpp):
-            msg = self.read (hpp)
-            self.pub.publish(msg)
+            pass
 
         def read (self, hpp):
-            # return self.MsgType (self.reader(hpp, pathId, time, self.data))
             return self.reader(hpp, self.data)
 
         def publish (self, msg):
@@ -169,7 +167,7 @@ class HppOutputQueue(HppClient):
             self.parent.viewer.client.gui.refresh()
 
     def __init__ (self):
-        super(HppOutputQueue, self).__init__ (withViewer = True)
+        super(HppOutputQueue, self).__init__ (withViewer = False)
 
         self.frequency = 200 # Hz
         self.viewerFreq = 25 # Hz
