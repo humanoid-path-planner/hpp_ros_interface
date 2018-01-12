@@ -375,17 +375,17 @@ class HppOutputQueue(HppClient):
         rospy.loginfo("Start publishing queue (size is {})".format(self.queue.qsize()))
         # The queue in SOT should have about 100ms of points
         n = 0
-        advance = 1. * self.frequency
+        advance = 1.5 * self.frequency / 10. # Begin with 150ms of points
         start = time.time()
-        highrate = rospy.Rate (5 * self.frequency)
-        rate = rospy.Rate (self.frequency)
+        # highrate = rospy.Rate (5 * self.frequency)
+        rate = rospy.Rate (10) # Send 100ms every 100ms
         while not self.queue.empty() or self.reading:
             dt = time.time() - start
             nstar = advance + dt * self.frequency
             while n < nstar and not self.queue.empty():
                 self.publishNext()
                 n += 1
-                highrate.sleep()
+                # highrate.sleep()
             self.publishViewerAtTime(dt)
             rate.sleep()
         rate = rospy.Rate(self.viewerFreq)

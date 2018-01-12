@@ -73,7 +73,8 @@ class PlayPath (smach.State):
                 'plug_sot': [ PlugSot, ],
                 'run_post_action': [ PlugSot, ],
                 'clear_queues': [ std_srvs.srv.Trigger, ],
-                'read_queue': [ std_srvs.srv.SetBool, ],
+                'read_queue': [ SetInt, ],
+                'stop_reading_queue': [ std_srvs.srv.Empty, ],
                 }
             }
 
@@ -130,7 +131,7 @@ class PlayPath (smach.State):
 
         # self.control_norm_ok = False
         rospy.loginfo("Read queue")
-        self.serviceProxies['sot']['read_queue'](True)
+        self.serviceProxies['sot']['read_queue'](10)
         # Wait for errors or publish done
         while not self.done:
             if self.error is not None:
@@ -147,7 +148,7 @@ class PlayPath (smach.State):
         rospy.loginfo("Wait for event on /sot_hpp/control_norm_changed")
         while not self.control_norm_ok:
             rate.sleep()
-        self.serviceProxies['sot']['read_queue'](False)
+        self.serviceProxies['sot']['stop_reading_queue']()
 
         # Run post action if any
         rospy.loginfo("Run post-action")
