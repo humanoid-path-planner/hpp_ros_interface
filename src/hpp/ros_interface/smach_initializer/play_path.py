@@ -43,8 +43,9 @@ class InitializePath(smach.State):
         userdata.endStateId = userdata.endStateIds[userdata.currentSection]
 
         if rospy.get_param ("/sm_sot_hpp/step_by_step", False):
-            rospy.loginfo("Wait for message on /sm_sot_hpp/step.")
+            rospy.loginfo("Preparing to read subpath. Wait for message on /sm_sot_hpp/step.")
             rospy.wait_for_message ("/sm_sot_hpp/step", Empty)
+            rospy.sleep(3)
 
         self.targetPub["read_subpath"].publish (ReadSubPath (userdata.pathId, start, length))
         rospy.loginfo("Start reading subpath. Waiting for one second.")
@@ -110,14 +111,25 @@ class PlayPath (smach.State):
     def execute(self, userdata):
         rate = rospy.Rate (1000)
 
+        if rospy.get_param ("/sm_sot_hpp/step_by_step", False):
+            rospy.loginfo("Beginning execution. Wait for message on /sm_sot_hpp/step.")
+            rospy.wait_for_message ("/sm_sot_hpp/step", Empty)
+            rospy.sleep(3)
+ 
         # TODO Check that there the current SOT and the future SOT are compatible ?
         rospy.loginfo("Run pre-action")
         status = self.serviceProxies['sot']['run_pre_action'](userdata.transitionId)
+           
         rospy.sleep(0.5)
         rospy.loginfo("Wait for event on /sot_hpp/control_norm_changed")
         while not self.control_norm_ok:
             rate.sleep()
 
+        if rospy.get_param ("/sm_sot_hpp/step_by_step", False):
+            rospy.loginfo("Pre-action ended. Wait for message on /sm_sot_hpp/step.")
+            rospy.wait_for_message ("/sm_sot_hpp/step", Empty)
+            rospy.sleep(3)
+ 
         rospy.loginfo("Publishing path")
         self.done = False
         self.serviceProxies['sot']['clear_queues']()
@@ -145,18 +157,36 @@ class PlayPath (smach.State):
             rospy.logerr(str(self.interruption))
             self.interruption = None
             return _outcomes[2]
+
+        # Sometimes, the function triggering /sot_hpp/control_norm_changed is a little slow to update
+        # and the movement is skipped
+        # This won't be a problem when we have a better mean of detecting the end of a movement
+        rospy.sleep(1)
+
         rospy.loginfo("Wait for event on /sot_hpp/control_norm_changed")
         while not self.control_norm_ok:
             rate.sleep()
         self.serviceProxies['sot']['stop_reading_queue']()
+        
+        if rospy.get_param ("/sm_sot_hpp/step_by_step", False):
+            rospy.loginfo("Action ended. Wait for message on /sm_sot_hpp/step.")
+            rospy.wait_for_message ("/sm_sot_hpp/step", Empty)
+            rospy.sleep(3)
 
         # Run post action if any
         rospy.loginfo("Run post-action")
         status = self.serviceProxies['sot']['run_post_action'](userdata.endStateId)
         rospy.sleep(1)
+                 
         rospy.loginfo("Wait for event on /sot_hpp/control_norm_changed")
         while not self.control_norm_ok:
             rate.sleep()
+
+        if rospy.get_param ("/sm_sot_hpp/step_by_step", False):
+            rospy.loginfo("Post-action ended. Wait for message on /sm_sot_hpp/step.")
+            rospy.wait_for_message ("/sm_sot_hpp/step", Empty)
+            rospy.sleep(3)
+
         return _outcomes[0]
 
 class WaitForInput(smach.State):
