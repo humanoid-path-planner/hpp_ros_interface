@@ -1,5 +1,13 @@
 import rospy
 
+def wait_for_service (srv, time = 0.2):
+    try:
+        rospy.wait_for_service(srv, time)
+    except rospy.ROSException:
+        rospy.logwarn("Waiting for service: {0}".format(srv))
+        rospy.wait_for_service(srv)
+        rospy.logwarn("Service {0} found.".format(srv))
+
 def createTopics (object, namespace, topics, subscribe):
     """
     \param subscribe boolean whether this node should subscribe to the topics.
@@ -38,4 +46,5 @@ def createServices (object, namespace, services, serve):
                 raise NotImplementedError("Class `{}` does not implement `{}`".format(object.__class__.__name__, services[1]))
             return rospy.Service(namespace, services[0], callback)
         else:
+            wait_for_service (namespace)
             return rospy.ServiceProxy(namespace, services[0])
