@@ -39,14 +39,16 @@ class InitializePath(smach.State):
         start = userdata.times[userdata.currentSection]
         length = userdata.times[userdata.currentSection + 1] - start
 
-        userdata.transitionId = userdata.transitionIds[userdata.currentSection]
-        userdata.endStateId = userdata.endStateIds[userdata.currentSection]
+        transitionId = userdata.transitionIds[userdata.currentSection]
+        userdata.transitionId = transitionId
+        userdata.endStateId   = userdata.endStateIds[userdata.currentSection]
 
         if rospy.get_param ("/sm_sot_hpp/step_by_step", False):
             rospy.loginfo("Preparing to read subpath. Wait for message on /sm_sot_hpp/step.")
             rospy.wait_for_message ("/sm_sot_hpp/step", Empty)
             rospy.sleep(3)
 
+        self.hppclient.manip.graph.selectGraph (transitionId[1])
         self.targetPub["read_subpath"].publish (ReadSubPath (userdata.pathId, start, length))
         rospy.loginfo("Start reading subpath. Waiting for one second.")
         rospy.sleep(1)
@@ -118,7 +120,7 @@ class PlayPath (smach.State):
  
         # TODO Check that there the current SOT and the future SOT are compatible ?
         rospy.loginfo("Run pre-action")
-        status = self.serviceProxies['sot']['run_pre_action'](userdata.transitionId)
+        status = self.serviceProxies['sot']['run_pre_action'](userdata.transitionId[0], userdata.transitionId[1])
            
         rospy.sleep(0.5)
         rospy.loginfo("Wait for event on /sot_hpp/control_norm_changed")
@@ -136,7 +138,7 @@ class PlayPath (smach.State):
         self.targetPub["publish"].publish()
         rospy.sleep(1)
 
-        status = self.serviceProxies['sot']['plug_sot'](userdata.transitionId)
+        status = self.serviceProxies['sot']['plug_sot'](userdata.transitionId[0], userdata.transitionId[1])
         if not status.success:
             rospy.logerr(status.msg)
             return _outcomes[1]
@@ -175,7 +177,7 @@ class PlayPath (smach.State):
 
         # Run post action if any
         rospy.loginfo("Run post-action")
-        status = self.serviceProxies['sot']['run_post_action'](userdata.endStateId)
+        status = self.serviceProxies['sot']['run_post_action'](userdata.endStateId[0], userdata.endStateId[1])
         rospy.sleep(1)
                  
         rospy.loginfo("Wait for event on /sot_hpp/control_norm_changed")
@@ -213,7 +215,7 @@ class WaitForInput(smach.State):
         self.hppclient = HppClient (False)
 
     def execute (self, userdata):
-        status = self.services['sot']['plug_sot'](-1)
+        status = self.services['sot']['plug_sot']("", "")
         res = rospy.wait_for_message ("/sm_sot_hpp/start_path", UInt32)
         pid = res.data
         rospy.loginfo("Requested to start path " + str(pid))
@@ -223,10 +225,17 @@ class WaitForInput(smach.State):
             manip = self.hppclient._manip()
             qs, ts = hpp.problem.getWaypoints(pid)
             # Add a first section to force going to init pose.
+            # ts: list of transition times. The first one is repeated to make the robot
+            # move to the initial configuration before any other motion.
             ts = ts[0:1] + ts
+            # tids: list of pair (transitionName, graphName)
             tids = [ manip.problem.edgeAtParam(pid, (t0 + t1) / 2) for t0,t1 in zip(ts[:-1], ts[1:]) ]
+            for i, tid in enumerate(tids):
+                print "foo", tid[1]
+                manip.graph.selectGraph (tid[1])
+                tids[i] = (manip.graph.getName (tid[0]), tid[1])
             print len(qs), len(ts), len(tids)
-            # Remove fake transitions
+            # Remove fake transitions (i.e. when id is the same for two consecutive transitions)
             tts = ts[0:3]
             ttids = tids[0:2]
             tqs = qs[0:2]
@@ -239,9 +248,15 @@ class WaitForInput(smach.State):
                     tts.append(t)
                     tqs.append(q)
 
-            userdata.times = tts
-            userdata.transitionIds = ttids
-            userdata.endStateIds = tuple ([manip.graph.getNode(q) for q in tqs])
+            userdata.times = tuple(tts)
+            userdata.transitionIds = tuple(ttids)
+            endStateIds = []
+            for q, tid in zip(tqs, ttids):
+                print "bar"
+                manip.graph.selectGraph (tid[1])
+                nid = manip.graph.getNode(q)
+                endStateIds.append ( (manip.graph.getName (nid), tid[1]) )
+            userdata.endStateIds = tuple (endStateIds)
             userdata.currentSection = -1
             # TODO this should not be necessary
             self.services['hpp']['target']['reset_topics']()
