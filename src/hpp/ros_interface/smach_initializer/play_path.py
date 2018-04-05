@@ -8,6 +8,13 @@ from hpp.ros_interface import ros_tools
 
 _outcomes = ["succeeded", "aborted", "preempted"]
 
+def wait_if_step_by_step(msg, time=3):
+    if rospy.get_param ("/sm_sot_hpp/step_by_step", False):
+        rospy.loginfo(msg + " Wait for message on /sm_sot_hpp/step.")
+        rospy.wait_for_message ("/sm_sot_hpp/step", Empty)
+        rospy.sleep(time)
+
+
 class InitializePath(smach.State):
     hppTargetPubDict = {
             "read_path": [ UInt32, 1 ],
@@ -43,10 +50,7 @@ class InitializePath(smach.State):
         userdata.transitionId = transitionId
         userdata.endStateId   = userdata.endStateIds[userdata.currentSection]
 
-        if rospy.get_param ("/sm_sot_hpp/step_by_step", False):
-            rospy.loginfo("Preparing to read subpath. Wait for message on /sm_sot_hpp/step.")
-            rospy.wait_for_message ("/sm_sot_hpp/step", Empty)
-            rospy.sleep(3)
+        wait_if_step_by_step ("Preparing to read subpath.")
 
         self.hppclient.manip.graph.selectGraph (transitionId[1])
         self.targetPub["read_subpath"].publish (ReadSubPath (userdata.pathId, start, length))
@@ -113,25 +117,19 @@ class PlayPath (smach.State):
     def execute(self, userdata):
         rate = rospy.Rate (1000)
 
-        if rospy.get_param ("/sm_sot_hpp/step_by_step", False):
-            rospy.loginfo("Beginning execution. Wait for message on /sm_sot_hpp/step.")
-            rospy.wait_for_message ("/sm_sot_hpp/step", Empty)
-            rospy.sleep(3)
- 
+        wait_if_step_by_step ("Beginning execution.")
+
         # TODO Check that there the current SOT and the future SOT are compatible ?
         rospy.loginfo("Run pre-action")
         status = self.serviceProxies['sot']['run_pre_action'](userdata.transitionId[0], userdata.transitionId[1])
-           
+
         rospy.sleep(0.5)
         rospy.loginfo("Wait for event on /sot_hpp/control_norm_changed")
         while not self.control_norm_ok:
             rate.sleep()
 
-        if rospy.get_param ("/sm_sot_hpp/step_by_step", False):
-            rospy.loginfo("Pre-action ended. Wait for message on /sm_sot_hpp/step.")
-            rospy.wait_for_message ("/sm_sot_hpp/step", Empty)
-            rospy.sleep(3)
- 
+        wait_if_step_by_step ("Pre-action ended.")
+
         rospy.loginfo("Publishing path")
         self.done = False
         self.serviceProxies['sot']['clear_queues']()
@@ -170,10 +168,7 @@ class PlayPath (smach.State):
             rate.sleep()
         self.serviceProxies['sot']['stop_reading_queue']()
         
-        if rospy.get_param ("/sm_sot_hpp/step_by_step", False):
-            rospy.loginfo("Action ended. Wait for message on /sm_sot_hpp/step.")
-            rospy.wait_for_message ("/sm_sot_hpp/step", Empty)
-            rospy.sleep(3)
+        wait_if_step_by_step ("Action ended.")
 
         # Run post action if any
         rospy.loginfo("Run post-action")
@@ -184,10 +179,7 @@ class PlayPath (smach.State):
         while not self.control_norm_ok:
             rate.sleep()
 
-        if rospy.get_param ("/sm_sot_hpp/step_by_step", False):
-            rospy.loginfo("Post-action ended. Wait for message on /sm_sot_hpp/step.")
-            rospy.wait_for_message ("/sm_sot_hpp/step", Empty)
-            rospy.sleep(3)
+        wait_if_step_by_step ("Post-action ended.")
 
         return _outcomes[0]
 
@@ -231,10 +223,9 @@ class WaitForInput(smach.State):
             # tids: list of pair (transitionName, graphName)
             tids = [ manip.problem.edgeAtParam(pid, (t0 + t1) / 2) for t0,t1 in zip(ts[:-1], ts[1:]) ]
             for i, tid in enumerate(tids):
-                print "foo", tid[1]
                 manip.graph.selectGraph (tid[1])
                 tids[i] = (manip.graph.getName (tid[0]), tid[1])
-            print len(qs), len(ts), len(tids)
+            # print len(qs), len(ts), len(tids)
             # Remove fake transitions (i.e. when id is the same for two consecutive transitions)
             tts = ts[0:3]
             ttids = tids[0:2]
@@ -252,7 +243,6 @@ class WaitForInput(smach.State):
             userdata.transitionIds = tuple(ttids)
             endStateIds = []
             for q, tid in zip(tqs, ttids):
-                print "bar"
                 manip.graph.selectGraph (tid[1])
                 nid = manip.graph.getNode(q)
                 endStateIds.append ( (manip.graph.getName (nid), tid[1]) )
