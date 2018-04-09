@@ -266,10 +266,12 @@ class HppOutputQueue(HppClient):
         except:
             return SetJointNamesResponse(False)
         rospy.loginfo("Joint names set to " + str(self.jointNames))
-        self.hasRootJoint = False
+        self.rootJointName = None
+        self.rootJointSizes = 0
         for n in self.jointNames:
             if n.endswith("root_joint"):
-                self.hasRootJoint = (hpp.robot.getJointConfigSize(n) == 7)
+                self.rootJointName = n
+                self.rootJointSizes = ( hpp.robot.getJointConfigSize(n), hpp.robot.getJointNumberDof(n) )
                 break
         return SetJointNamesResponse(True)
 
@@ -278,10 +280,13 @@ class HppOutputQueue(HppClient):
         qout = list()
         for segment in self.joint_selection[0]:
             qout.extend(qin[segment[0]:segment[1]])
-        if self.hasRootJoint:
+        if self.rootJointName is not None:
+            rootpos = client.robot.getJointPosition(self.rootJointName)
             from hpp import Quaternion
-            q = Quaternion(qin[3:7])
-            qout[3:7] = q.toRPY()
+            q = Quaternion(rootpos[3:7])
+            # TODO although it is weird, the root joint may not be at
+            # position 0
+            qout[0:self.rootJointSizes[0]] = rootpos[0:3] + q.toRPY().tolist()
         return Vector(qout)
 
     def _readVelocityAtParam (self, client, data):
@@ -289,6 +294,11 @@ class HppOutputQueue(HppClient):
         vout = list()
         for segment in self.joint_selection[1]:
             vout.extend(vin[segment[0]:segment[1]])
+        if self.rootJointName is not None:
+            rootvel = client.robot.getJointVelocity(self.rootJointName)
+            # TODO although it is weird, the root joint may not be at
+            # position 0
+            vout[0:self.rootJointSizes[1]] = rootvel
         return Vector(vout)
 
     def _readCenterOfMass (self, client, data):
