@@ -169,7 +169,7 @@ class HppOutputQueue(HppClient):
     def __init__ (self):
         super(HppOutputQueue, self).__init__ (withViewer = False)
 
-        self.frequency = 1. / rospy.get_param ("/sot/period") # Hz
+        self.frequency = 1. / rospy.get_param ("/sot/dt") # Hz
         self.viewerFreq = 25 # Hz
         self.queue_size = 10 * self.frequency
         self.queue = Queue.Queue (self.queue_size)
