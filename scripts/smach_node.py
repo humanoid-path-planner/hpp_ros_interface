@@ -7,5 +7,4 @@ sm, sis = makeStateMachine()
 
 sis.start()
 outcome = sm.execute()
-rospy.spin()
 sis.stop()
