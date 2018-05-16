@@ -259,6 +259,10 @@ class WaitForInput(smach.State):
         return "succeeded"
 
 def makeStateMachine():
+    # Set default values of parameters
+    if not rospy.has_param ("/sm_sot_hpp/step_by_step"):
+        rospy.set_param ("/sm_sot_hpp/step_by_step", False)
+
     sm = smach.StateMachine (outcomes = _outcomes)
 
     with sm:
