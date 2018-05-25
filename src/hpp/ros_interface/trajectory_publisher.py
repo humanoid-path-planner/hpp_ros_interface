@@ -59,7 +59,7 @@ class JointPathCommandPublisher:
         q = self.hpp.problem.configAtParam(pathId, t)
         self.msg.points[pointId].positions = _fillVector (q, self.configSegments)
         if self.hasVelocity:
-            v = self.hpp.problem.velocityAtParam(pathId, t)
+            v = self.hpp.problem.derivativeAtParam (pathId, 1, t)
             self.msg.points[pointId].velocities = _fillVector (v, self.velocitySegments)
         self.msg.points[pointId].time_from_start = rospy.Duration(pointTime)
 
@@ -326,7 +326,7 @@ class HppOutputQueue(HppClient):
     def readAt (self, pathId, time, uv = False, timeShift = 0):
         hpp = self._hpp()
         hpp.robot.setCurrentConfig( hpp.problem.configAtParam (pathId, time))
-        hpp.robot.setCurrentVelocity( hpp.problem.velocityAtParam (pathId, time))
+        hpp.robot.setCurrentVelocity( hpp.problem.derivativeAtParam (pathId, 1, time))
         if uv:
             self.queueViewer.append ((time - timeShift, self.topicViewer.read (hpp, uv)))
         msgs = []
