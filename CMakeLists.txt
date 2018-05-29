@@ -48,7 +48,7 @@ ADD_SUBDIRECTORY(src)
 
 INSTALL(PROGRAMS
   scripts/hpp_node.py
-  scripts/smach_node.py
+  scripts/path_execution_fsm.py
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/scripts)
 INSTALL(DIRECTORY launch
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})

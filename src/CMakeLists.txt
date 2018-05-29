@@ -23,5 +23,5 @@ SET (PYTHON_FILE
     __init__.py)
 
 FOREACH(F ${PYTHON_FILE})
-  PYTHON_INSTALL_ON_SITE("hpp/ros_interface/smach_initializer" ${F})
+  PYTHON_INSTALL_ON_SITE("hpp/ros_interface/path_execution_fsm" ${F})
 ENDFOREACH()
